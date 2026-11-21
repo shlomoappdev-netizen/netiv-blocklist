@@ -1,0 +1,39 @@
+{
+  "bloom": { "capacity": 1200000, "fp": 0.0001, "k": 13 },
+  "limits": { "maxTotalChange": 0.1 },
+  "sources": [
+    {
+      "name": "hagezi",
+      "title": "HaGeZi NSFW",
+      "url": "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/nsfw-onlydomains.txt",
+      "format": "domains",
+      "license": "GPL-3.0",
+      "license_url": "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/LICENSE",
+      "homepage": "https://github.com/hagezi/dns-blocklists",
+      "maxDrop": 0.2, "maxGrow": 0.5,
+      "mode": "enforce"
+    },
+    {
+      "name": "blp",
+      "title": "The Block List Project — porn",
+      "url": "https://raw.githubusercontent.com/blocklistproject/Lists/master/porn.txt",
+      "format": "hosts",
+      "license": "Unlicense",
+      "license_url": "https://raw.githubusercontent.com/blocklistproject/Lists/master/LICENSE",
+      "homepage": "https://github.com/blocklistproject/Lists",
+      "maxDrop": 0.2, "maxGrow": 0.5,
+      "mode": "enforce"
+    },
+    {
+      "name": "stevenblack",
+      "title": "StevenBlack hosts — porn only",
+      "url": "https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/porn-only/hosts",
+      "format": "hosts",
+      "license": "MIT (hosts collection); CC BY 4.0 (porn extension data)",
+      "license_url": "https://raw.githubusercontent.com/StevenBlack/hosts/master/license.txt",
+      "homepage": "https://github.com/StevenBlack/hosts",
+      "maxDrop": 0.2, "maxGrow": 0.5,
+      "mode": "enforce"
+    }
+  ]
+}

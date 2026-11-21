@@ -1,0 +1,5 @@
+# Title: sample
+bad-one.com
+*.bad-two.com
+www.bad-three.com
+sub.bad-one.com

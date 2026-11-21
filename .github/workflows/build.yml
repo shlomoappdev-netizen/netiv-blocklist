@@ -1,0 +1,68 @@
+name: build
+
+on:
+  schedule:
+    - cron: '17 3 * * *'   # 05:17 Israel (winter)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Tests
+        run: node --test
+
+      - name: Previous per-source lists (fallback for a broken source)
+        run: |
+          mkdir -p state
+          gh release download --pattern lists.json.gz --dir state || echo "no previous release"
+
+      - name: Build
+        id: build
+        run: |
+          set +e
+          node build.mjs --out . --state state
+          code=$?
+          set -e
+          if [ "$code" = 3 ]; then echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ "$code" != 0 ]; then exit "$code"; fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "version=$(node -p 'require("./latest.json").version')" >> "$GITHUB_OUTPUT"
+
+      - name: Commit, tag and release
+        if: steps.build.outputs.changed == 'true'
+        run: |
+          V=${{ steps.build.outputs.version }}
+          git config user.name "netiv-blocklist-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A v latest.json
+          git commit -m "v$V: $(node -p 'require("./latest.json").count') hosts"
+          git tag "v$V"
+          git push origin HEAD "v$V"
+          node -e '
+            const l = require("./latest.json");
+            const s = Object.entries(l.sources).map(([k, v]) => `- ${k}: ${v.count}${v.frozen ? " (frozen at previous)" : ""}`).join("\n");
+            const w = l.report.warnings.map((x) => `- ${x}`).join("\n") || "- none";
+            console.log(`${l.count} hosts. full.bin ${l.full.size} bytes${l.delta ? `, delta from v${l.delta.from}: ${l.delta.size} bytes` : ""}.\n\nSources:\n${s}\n\nWarnings:\n${w}`);
+          ' > notes.md
+          gh release create "v$V" release-assets/domains.txt.gz release-assets/lists.json.gz --title "v$V" --notes-file notes.md
+
+      - name: Purge jsDelivr (branch URL only; tag URLs never change)
+        if: steps.build.outputs.changed == 'true'
+        run: curl -fsS "https://purge.jsdelivr.net/gh/${{ github.repository }}@main/latest.json" || true

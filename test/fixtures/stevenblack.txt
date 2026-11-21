@@ -1,0 +1,2 @@
+0.0.0.0 bad-five.org # comment
+0.0.0.0 bad-one.com

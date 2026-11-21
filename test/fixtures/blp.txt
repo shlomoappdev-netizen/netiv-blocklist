@@ -1,0 +1,8 @@
+# hosts
+0.0.0.0 bad-four.net
+0.0.0.0 localhost
+127.0.0.1 deep.bad-four.net
+0.0.0.0 10.0.0.1
+0.0.0.0 amazonaws.com
+0.0.0.0 adult.amazonaws.com
+0.0.0.0 akamaihd.net
