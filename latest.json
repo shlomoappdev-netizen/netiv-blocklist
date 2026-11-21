@@ -1,0 +1,45 @@
+{
+  "format": "NBL1",
+  "version": 1,
+  "built_at": "2026-11-21T22:21:54.872Z",
+  "count": 977475,
+  "k": 13,
+  "m": 23004160,
+  "capacity": 1200000,
+  "fp_rate": 0.0001,
+  "full": {
+    "file": "v/1/full.bin",
+    "sha256": "8acae85b5c7b5c79a5f3267163e1b384a7a6dfa8131b7de6aba76c3f2e0586e9",
+    "size": 2875573
+  },
+  "payload_sha256": "628a8e78177b5660cc45eed7f4b72bf62546291db1acc34749fe536195d69b37",
+  "delta": null,
+  "exceptions": [],
+  "sources": {
+    "hagezi": {
+      "count": 88002,
+      "frozen": false,
+      "mode": "enforce",
+      "license": "GPL-3.0",
+      "url": "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/nsfw-onlydomains.txt"
+    },
+    "blp": {
+      "count": 952054,
+      "frozen": false,
+      "mode": "enforce",
+      "license": "Unlicense",
+      "url": "https://raw.githubusercontent.com/blocklistproject/Lists/master/porn.txt"
+    },
+    "stevenblack": {
+      "count": 64305,
+      "frozen": false,
+      "mode": "enforce",
+      "license": "MIT (hosts collection); CC BY 4.0 (porn extension data)",
+      "url": "https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/porn-only/hosts"
+    }
+  },
+  "report": {
+    "warnings": [],
+    "never_block_dropped": []
+  }
+}
