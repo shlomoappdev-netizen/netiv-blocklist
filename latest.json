@@ -1,23 +1,29 @@
 {
   "format": "NBL1",
-  "version": 1,
-  "built_at": "2026-11-21T22:21:54.872Z",
-  "count": 977475,
+  "version": 2,
+  "built_at": "2026-11-22T04:00:00.551Z",
+  "count": 977483,
   "k": 13,
   "m": 23004160,
   "capacity": 1200000,
   "fp_rate": 0.0001,
   "full": {
-    "file": "v/1/full.bin",
-    "sha256": "8acae85b5c7b5c79a5f3267163e1b384a7a6dfa8131b7de6aba76c3f2e0586e9",
+    "file": "v/2/full.bin",
+    "sha256": "12a71f9f7011d50c7fbe52ff83bab6009f0ea19e2d78ff1006434b777352ec0c",
     "size": 2875573
   },
-  "payload_sha256": "628a8e78177b5660cc45eed7f4b72bf62546291db1acc34749fe536195d69b37",
-  "delta": null,
+  "payload_sha256": "f442f486f011d6b4b7385d11ae6b3c78d7159a0d51d8f1dca2eaa09b1996ded7",
+  "delta": {
+    "from": 1,
+    "file": "v/2/delta-from-1.bin",
+    "sha256": "0e983ce8a3d41f3e0fc430fdbe63e66ad3d77323e66635e3a957d34cecd6e664",
+    "size": 762,
+    "changed_bits": 159
+  },
   "exceptions": [],
   "sources": {
     "hagezi": {
-      "count": 88002,
+      "count": 88040,
       "frozen": false,
       "mode": "enforce",
       "license": "GPL-3.0",
