@@ -71,5 +71,16 @@ node build.mjs --out /tmp/out            # downloads the sources
 node build.mjs --offline DIR --out /tmp/out   # reads DIR/<source>.txt
 ```
 
-`additions.txt` / `exceptions.txt` (optional, one host a line) are read from
-the output folder. Later they come from the admin panel's database.
+## The admin panel (Supabase)
+
+With the secrets `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, the build reads
+our additions, exceptions and open hosts (`blocklist_build_input`), and after the
+release `publish-db.mjs` sends the version, conflicts and Bloom false positives
+back (`blocklist_publish`). Anything derived from open hosts stays in
+`private/` (git-ignored) and goes only to Supabase; logs show counts only.
+Without the secrets, `additions.txt`, `exceptions.txt` and `open-hosts.txt`
+(optional, one host a line) are read from the output folder.
+
+Exceptions from the panel are not in `latest.json`; phones get them with their
+policy. `latest.json` → `exceptions` holds only Bloom false positives on the
+public clean set.

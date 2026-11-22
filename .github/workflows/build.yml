@@ -18,6 +18,8 @@ jobs:
     timeout-minutes: 30
     env:
       GH_TOKEN: ${{ github.token }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -40,9 +42,10 @@ jobs:
           node build.mjs --out . --state state
           code=$?
           set -e
-          if [ "$code" = 3 ]; then echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ "$code" = 3 ]; then echo "changed=false" >> "$GITHUB_OUTPUT"; echo "built=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           if [ "$code" != 0 ]; then exit "$code"; fi
           echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "built=true" >> "$GITHUB_OUTPUT"
           echo "version=$(node -p 'require("./latest.json").version')" >> "$GITHUB_OUTPUT"
 
       - name: Commit, tag and release
@@ -66,3 +69,7 @@ jobs:
       - name: Purge jsDelivr (branch URL only; tag URLs never change)
         if: steps.build.outputs.changed == 'true'
         run: curl -fsS "https://purge.jsdelivr.net/gh/${{ github.repository }}@main/latest.json" || true
+
+      - name: Tell the panel (Supabase) the live version, conflicts and false positives
+        if: steps.build.outputs.built == 'true'
+        run: node publish-db.mjs

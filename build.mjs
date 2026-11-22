@@ -18,7 +18,10 @@ import { fileURLToPath } from 'node:url';
 import {
   parseList, collapse, parseNeverBlock, hitsNeverBlock, normalizeHost, bitsFor, buildBloom,
   encodeFull, decodeFull, encodeDelta, sha256, checkSourceChanges, checkTotalChange, sanity, K,
+  parentsOf, bloomHas,
 } from './lib.mjs';
+
+const CDN = 'https://cdn.jsdelivr.net/gh/shlomoappdev-netizen/netiv-blocklist';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(
@@ -46,15 +49,34 @@ async function fetchText(url, tries = 3, timeoutMs = 60_000) {
   throw last;
 }
 
-// Stage 2 hook: additions and exceptions will come from Supabase
-// (blocklist_additions / blocklist_exceptions), and open addresses for the
-// conflict report. Until then they are read from optional local files.
+// Our additions, exceptions and open hosts come from Supabase (blocklist_build_input,
+// service role) when SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set; otherwise from
+// optional local files (tests, development). Open hosts and everything derived from them
+// are private: they go back to Supabase only (private/report.json, never committed or logged).
+export async function supabaseRpc(fn, body = {}) {
+  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const res = await fetch(`${url.replace(/\/$/, '')}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    headers: { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(60_000),
+  });
+  if (!res.ok) throw new Error(`supabase ${fn}: HTTP ${res.status}`);
+  return res.json();
+}
+
 async function loadOurLists() {
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    const i = await supabaseRpc('blocklist_build_input');
+    const norm = (a) => (a ?? []).map(normalizeHost).filter(Boolean);
+    log(`supabase: ${i.additions.length} additions, ${i.exceptions.length} exceptions, ${i.open_hosts.length} open hosts`);
+    return { additions: norm(i.additions), exceptions: norm(i.exceptions), openHosts: norm(i.open_hosts) };
+  }
   const f = (n) => path.join(OUT, n);
   return {
     additions: fs.existsSync(f('additions.txt')) ? readLines(f('additions.txt')).map(normalizeHost).filter(Boolean) : [],
     exceptions: fs.existsSync(f('exceptions.txt')) ? readLines(f('exceptions.txt')).map(normalizeHost).filter(Boolean) : [],
-    openHosts: [], // stage 2: open rules from Supabase, for conflicts and Bloom false positives
+    openHosts: fs.existsSync(f('open-hosts.txt')) ? readLines(f('open-hosts.txt')).map(normalizeHost).filter(Boolean) : [],
   };
 }
 
@@ -123,14 +145,45 @@ async function main() {
   const san = sanity({
     bits, m, set,
     adult: readLines(path.join(HERE, 'sanity/adult.txt')),
-    clean: [...readLines(path.join(HERE, 'sanity/clean.txt')), ...ours.openHosts],
+    clean: readLines(path.join(HERE, 'sanity/clean.txt')),
   });
   if (san.errors.length) throw new Error('sanity failed:\n  ' + san.errors.join('\n  '));
   report.falsePositives = san.falsePositives;
 
+  // 5b. Our open hosts (private): really listed → conflict for the panel; only a Bloom hit →
+  // false positive, which becomes an exception. Written to private/report.json, counts logged.
+  const bySource = Object.fromEntries(cfg.sources.map((s) => [s.name, new Set(lists[s.name])]));
+  const additionsSet = new Set(ours.additions);
+  const conflicts = [];
+  const openFp = new Set();
+  for (const h of new Set(ours.openHosts)) {
+    const chain = [h, ...parentsOf(h)];
+    const listed = chain.find((x) => set.has(x));
+    if (listed) {
+      const found = Object.entries(bySource).filter(([, s]) => chain.some((x) => s.has(x))).map(([n]) => n);
+      if (chain.some((x) => additionsSet.has(x))) found.push('ours');
+      conflicts.push({ domain: h, listed_as: listed, found_in: found });
+    } else for (const x of chain) if (bloomHas(bits, m, x)) openFp.add(x);
+  }
+  log(`open hosts: ${ours.openHosts.length} checked, ${conflicts.length} conflicts, ${openFp.size} false positives`);
+  const writePrivate = (version, full, delta, built_at) => {
+    fs.mkdirSync(path.join(OUT, 'private'), { recursive: true });
+    fs.writeFileSync(path.join(OUT, 'private/report.json'), JSON.stringify({
+      version, sha256: full.sha256, url: `${CDN}@v${version}/${full.file}`,
+      delta_url: delta ? `${CDN}@v${version}/${delta.file}` : null,
+      count: domains.length, built_at, sources: countsOut(),
+      conflicts, false_positives: [...openFp].sort(),
+    }));
+  };
+  const countsOut = () => Object.fromEntries(cfg.sources.map((s) => [s.name, { count: counts[s.name], frozen: report.frozen.includes(s.name) }]));
+
   // 6. Unchanged?
   const payloadSha = sha256(bits);
-  if (prev && prev.payload_sha256 === payloadSha) { log(`no change since v${prev.version}`); return 3; }
+  if (prev && prev.payload_sha256 === payloadSha) {
+    writePrivate(prev.version, prev.full, prev.delta, prev.built_at);
+    log(`no change since v${prev.version}`);
+    return 3;
+  }
 
   // 7. Write
   const version = (prev?.version ?? 0) + 1;
@@ -175,13 +228,15 @@ async function main() {
     delta,
     // Hosts the Bloom filter says "probably in" that are not really listed.
     // The phone must treat these as not blocked.
-    exceptions: [...new Set([...report.falsePositives, ...exceptions])].sort(),
+    // Only from the public clean set; our own exceptions reach phones through device-policy.
+    exceptions: report.falsePositives,
     sources: Object.fromEntries(cfg.sources.map((s) => [s.name, {
       count: counts[s.name], frozen: report.frozen.includes(s.name), mode: s.mode, license: s.license, url: s.url,
     }])),
     report: { warnings: report.warnings, never_block_dropped: report.neverBlockDropped.sort() },
   };
   fs.writeFileSync(latestPath, JSON.stringify(latest, null, 2) + '\n');
+  writePrivate(version, latest.full, delta, latest.built_at);
 
   // Keep only this version and the previous one (delta base) in the tree; tags keep the rest.
   for (const v of fs.readdirSync(path.join(OUT, 'v'))) {
@@ -195,4 +250,6 @@ async function main() {
   return 0;
 }
 
-main().then((code) => process.exit(code), (e) => { console.error(`BUILD STOPPED: ${e.message}`); process.exit(1); });
+if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))) {
+  main().then((code) => process.exit(code), (e) => { console.error(`BUILD STOPPED: ${e.message}`); process.exit(1); });
+}

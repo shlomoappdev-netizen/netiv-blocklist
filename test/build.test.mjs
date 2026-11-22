@@ -26,7 +26,7 @@ function sandbox() {
   fs.cpSync(FIX, off, { recursive: true });
   return { dir, off, out: path.join(dir, 'out'), state: path.join(dir, 'state') };
 }
-const run = (s) => spawnSync(process.execPath, [path.join(s.dir, 'build.mjs'), '--offline', s.off, '--out', s.out, '--state', s.state], { encoding: 'utf8' });
+const run = (s) => spawnSync(process.execPath, [path.join(s.dir, 'build.mjs'), '--offline', s.off, '--out', s.out, '--state', s.state], { encoding: 'utf8', env: { ...process.env, SUPABASE_URL: '', SUPABASE_SERVICE_ROLE_KEY: '' } });
 
 test('build v1, no-change, v2 with delta, and stops', () => {
   const s = sandbox();
@@ -87,4 +87,24 @@ test('sanity failure stops the build', () => {
   assert.equal(r.status, 1);
   assert.match(r.stderr, /clean host is listed: bad-five.org/);
   assert.ok(!fs.existsSync(path.join(s.out, 'latest.json')));
+});
+
+test('open hosts: conflicts and false positives stay private', () => {
+  const s = sandbox();
+  fs.mkdirSync(s.out);
+  // x.bad-four.net is really listed (via its parent); cloudfront-like.example is clean.
+  fs.writeFileSync(path.join(s.out, 'open-hosts.txt'), 'x.bad-four.net\nclean.example\nbad-one.com\n');
+  const r = run(s);
+  assert.equal(r.status, 0, r.stderr + r.stdout);
+  const rep = JSON.parse(fs.readFileSync(path.join(s.out, 'private/report.json')));
+  assert.deepEqual(rep.conflicts.map((c) => [c.domain, c.listed_as, c.found_in.join()]).sort(),
+    [['bad-one.com', 'bad-one.com', 'hagezi,stevenblack'], ['x.bad-four.net', 'bad-four.net', 'blp']]);
+  assert.equal(rep.version, 1);
+  assert.match(rep.url, /@v1\/v\/1\/full\.bin$/);
+  const pub = fs.readFileSync(path.join(s.out, 'latest.json'), 'utf8') + r.stdout;
+  for (const h of ['x.bad-four.net', 'clean.example']) assert.ok(!pub.includes(h), `${h} leaked`);
+  // unchanged build still writes the private report (for the panel)
+  fs.rmSync(path.join(s.out, 'private'), { recursive: true });
+  assert.equal(run(s).status, 3);
+  assert.ok(fs.existsSync(path.join(s.out, 'private/report.json')));
 });
