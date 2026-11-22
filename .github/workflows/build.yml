@@ -73,3 +73,8 @@ jobs:
       - name: Tell the panel (Supabase) the live version, conflicts and false positives
         if: steps.build.outputs.built == 'true'
         run: node publish-db.mjs
+
+      - name: UT1 for the panel only (private storage; not published)
+        if: steps.build.outputs.built == 'true'
+        continue-on-error: true
+        run: node ut1.mjs
