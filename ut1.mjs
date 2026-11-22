@@ -26,7 +26,8 @@ fs.mkdirSync('private', { recursive: true });
 fs.writeFileSync('private/ut1.bin', file);
 
 const base = SUPABASE_URL.replace(/\/$/, '');
-const h = { apikey: KEY, authorization: `Bearer ${KEY}` };
+// New-style keys (sb_secret_…) go in apikey only; a legacy JWT key also as the bearer.
+const h = { apikey: KEY, ...(KEY.startsWith('eyJ') ? { authorization: `Bearer ${KEY}` } : {}) };
 await fetch(`${base}/storage/v1/bucket`, { method: 'POST', headers: { ...h, 'content-type': 'application/json' },
   body: JSON.stringify({ id: 'blocklist', name: 'blocklist', public: false }) }); // exists → 400/409, fine
 const up = await fetch(`${base}/storage/v1/object/blocklist/ut1.bin`, {

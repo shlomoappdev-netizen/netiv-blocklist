@@ -57,7 +57,7 @@ export async function supabaseRpc(fn, body = {}) {
   const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const res = await fetch(`${url.replace(/\/$/, '')}/rest/v1/rpc/${fn}`, {
     method: 'POST',
-    headers: { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+    headers: { apikey: key, ...(key.startsWith('eyJ') ? { authorization: `Bearer ${key}` } : {}), 'content-type': 'application/json' },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(60_000),
   });
