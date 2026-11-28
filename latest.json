@@ -1,29 +1,29 @@
 {
   "format": "NBL1",
-  "version": 8,
-  "built_at": "2026-11-27T04:14:48.904Z",
-  "count": 971003,
+  "version": 9,
+  "built_at": "2026-11-28T04:02:58.366Z",
+  "count": 973003,
   "k": 13,
   "m": 23004160,
   "capacity": 1200000,
   "fp_rate": 0.0001,
   "full": {
-    "file": "v/8/full.bin",
-    "sha256": "b23153315ad47e0793561a9af56318ec5f963ff6e08da8172836b0299c2a5876",
+    "file": "v/9/full.bin",
+    "sha256": "9c559fb071ae69efcfa32202afb9f294b58f14585fbdc3cc64e0bbb311c3c495",
     "size": 2875573
   },
-  "payload_sha256": "570e87c17af6f988a0ca58369f06492ff4f5273d47e952a25c6576c1bbde72ce",
+  "payload_sha256": "a676b505d2b443caf8f5cf9a90294429b1a7b744f0ef506d1cee9d44751de1a5",
   "delta": {
-    "from": 7,
-    "file": "v/8/delta-from-7.bin",
-    "sha256": "0f64a5b17edc35ddc556a0f901b8e43e94eade237c9b86626ee3f9c93da8ce74",
-    "size": 22717,
-    "changed_bits": 7541
+    "from": 8,
+    "file": "v/9/delta-from-8.bin",
+    "sha256": "68a2d2a4e0b66368e8805d5a4cf580d3189fc7afe3ff6d4c486bcda4ee8acfaa",
+    "size": 51989,
+    "changed_bits": 18094
   },
   "exceptions": [],
   "sources": {
     "hagezi": {
-      "count": 80861,
+      "count": 100128,
       "frozen": false,
       "mode": "enforce",
       "license": "GPL-3.0",
@@ -37,7 +37,7 @@
       "url": "https://raw.githubusercontent.com/blocklistproject/Lists/master/porn.txt"
     },
     "stevenblack": {
-      "count": 64305,
+      "count": 64308,
       "frozen": false,
       "mode": "enforce",
       "license": "MIT (hosts collection); CC BY 4.0 (porn extension data)",
